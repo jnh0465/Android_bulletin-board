@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "927727085771",
+    "firebase_url": "https://bulletinboard-d8d0f.firebaseio.com",
+    "project_id": "bulletinboard-d8d0f",
+    "storage_bucket": "bulletinboard-d8d0f.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:927727085771:android:861793cb610f6e77",
+        "android_client_info": {
+          "package_name": "com.jiwoolee.android_bulletinboard"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "927727085771-2ipe2u0l13fdi4pgee3udr7jibkav4k6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jiwoolee.android_bulletinboard",
+            "certificate_hash": "267e530bc53c631c01e5dc554b867517e08f9b1f"
+          }
+        },
+        {
+          "client_id": "927727085771-kjd6bv29j316i0pnbhmnttbh4ategb73.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlMvURWPRnOTN5FmmzSpRTrox0PRHFUB4"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "927727085771-kjd6bv29j316i0pnbhmnttbh4ategb73.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
