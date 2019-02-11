@@ -1,3 +1,22 @@
 <resources>
     <string name="app_name">Android_bulletinboard</string>
+
+    <string name="label_emailpassword">Email/Password Authentication</string>
+    <string name="desc_emailpassword">Use an email and password to authenticate with Firebase.</string>
+
+    <string name="label_passwordless">Passwordless Authentication</string>
+    <string name="desc_passwordless">Use only an email to authenticate with Firebase.</string>
+
+    <string name="create_account">Create Account?</string>
+    <string name="sign_in">Sign\nIn</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="verify_email">Verify Email</string>
+    <string name="loading">Loading…</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Password</string>
+    <string name="auth_failed">Authentication failed</string>
+    <string name="signed_in">Signed In</string>
+    <string name="signed_out">Signed Out</string>
+    <string name="emailpassword_status_fmt">%1$s</string>
+
 </resources>

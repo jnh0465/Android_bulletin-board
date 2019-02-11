@@ -1,33 +1,146 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:background="@color/grey_100"
+    android:orientation="vertical"
+    android:weightSum="4">
 
-    <com.google.android.gms.common.SignInButton
-        android:id="@+id/signInButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true">
+    <LinearLayout
+        android:id="@+id/userFields"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.4"
+        android:gravity="right|center_horizontal"
+        android:orientation="vertical"
+        android:visibility="visible">
 
-    </com.google.android.gms.common.SignInButton>
+        <LinearLayout
+            android:id="@+id/signedInButtons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentStart="true"
+            android:layout_weight="1"
+            android:gravity="center_vertical|end"
+            android:orientation="horizontal"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:visibility="visible"
+            android:weightSum="2.0">
 
-    <Button
-        android:id="@+id/signOutButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:text="signout"></Button>
+            <TextView
+                android:id="@+id/status"
+                style="@style/ThemeOverlay.MyTextDetail"
+                android:layout_width="0dp"
+                android:layout_height="43dp"
+                android:layout_weight="1.0"
+                android:gravity="right|center_vertical"
+                android:text="@string/signed_out" />
 
-    <Button
-        android:id="@+id/disconnectButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:text="disconnect"></Button>
+            <Button
+                android:id="@+id/signOutButton"
+                style="@style/Widget.AppCompat.Button.Colored"
+                android:layout_width="35dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.3"
+                android:text="@string/sign_out"
+                android:textAppearance="@style/TextAppearance.AppCompat.Small"
+                android:theme="@style/ThemeOverlay.MyDarkButton" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:id="@+id/loginFields"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="40dp"
+        android:background="@color/grey_300"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/imageView2"
+            android:layout_width="match_parent"
+            android:layout_height="392dp"
+            android:layout_weight="2"
+            app:srcCompat="@drawable/common_google_signin_btn_icon_dark" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="270dp"
+            android:layout_weight="3"
+            android:gravity="center_vertical|center_horizontal"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/emailPasswordFields"
+                android:layout_width="308dp"
+                android:layout_height="120dp"
+                android:layout_weight="2"
+                android:background="@color/grey_500"
+                android:gravity="bottom"
+                android:orientation="vertical"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:visibility="visible">
+
+                <EditText
+                    android:id="@+id/fieldEmail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/hint_email"
+                    android:inputType="textEmailAddress" />
+
+                <EditText
+                    android:id="@+id/fieldPassword"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/hint_password"
+                    android:inputType="textPassword" />
+
+                <Button
+                    android:id="@+id/emailCreateAccountButton"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="left"
+                    android:text="@string/create_account"
+                    android:theme="@style/ThemeOverlay.MyDarkButton" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/emailPasswordButtons"
+                android:layout_width="wrap_content"
+                android:layout_height="120dp"
+                android:layout_below="@+id/emailPasswordFields"
+                android:layout_weight="1"
+                android:background="@color/grey_500"
+                android:gravity="right|center"
+                android:orientation="vertical"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp">
+
+                <Button
+                    android:id="@+id/emailSignInButton"
+                    style="@style/Widget.AppCompat.Button.Colored"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="@string/sign_in"
+                    android:theme="@style/ThemeOverlay.MyDarkButton" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+
+
 </LinearLayout>
