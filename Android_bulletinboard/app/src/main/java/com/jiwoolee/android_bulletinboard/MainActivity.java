@@ -1,5 +1,6 @@
 package com.jiwoolee.android_bulletinboard;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
@@ -9,11 +10,18 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.GoogleAuthProvider;
 
 public class MainActivity extends BaseActivity implements View.OnClickListener {
 
@@ -21,6 +29,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private EditText mEmailField;
     private EditText mPasswordField;
     private FirebaseAuth mAuth;
+
+    private GoogleSignInClient mGoogleSignInClient;
+    private static final int RC_SIGN_IN = 9001;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -34,7 +45,15 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         findViewById(R.id.emailSignInButton).setOnClickListener(this);  //리스너 연결
         findViewById(R.id.emailCreateAccountButton).setOnClickListener(this);
         findViewById(R.id.signOutButton).setOnClickListener(this);
+        findViewById(R.id.signInButton).setOnClickListener(this);
 
+        //구글 클라이언트 연결
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(R.string.default_web_client_id))
+                .requestEmail()
+                .build();
+
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
         mAuth = FirebaseAuth.getInstance(); //firebase 연결
     }
 
@@ -63,6 +82,38 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                         hideProgressDialog();
                     }
                 });
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == RC_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                AuthCredential credential = GoogleAuthProvider.getCredential(account.getIdToken(), null);
+                mAuth.signInWithCredential(credential)
+                        .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                            @Override
+                            public void onComplete(@NonNull Task<AuthResult> task) {
+                                if (task.isSuccessful()) {
+                                    FirebaseUser user = mAuth.getCurrentUser();
+                                    updateUI(user);
+                                } else {
+                                    updateUI(null);
+                                }
+                            }
+                        });
+            } catch (ApiException e) {
+                updateUI(null);
+            }
+        }
+    }
+
+    private void signIn_google() {
+        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, RC_SIGN_IN);
     }
 
     private void signIn(String email, String password) { //로그인
@@ -126,10 +177,12 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                     user.getEmail(), user.isEmailVerified()));
             findViewById(R.id.loginFields).setVisibility(View.GONE);
             findViewById(R.id.userFields).setVisibility(View.VISIBLE);
+            findViewById(R.id.signInButton).setVisibility(View.GONE);
         } else { //현재 로그인 상태가 아니면
             mStatusTextView.setText(R.string.signed_out);
             findViewById(R.id.loginFields).setVisibility(View.VISIBLE);
             findViewById(R.id.userFields).setVisibility(View.GONE);
+            findViewById(R.id.signInButton).setVisibility(View.VISIBLE);
         }
     }
 
@@ -142,6 +195,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             signIn(mEmailField.getText().toString(), mPasswordField.getText().toString());
         } else if (i == R.id.signOutButton) {
             signOut();
+        } else if (i == R.id.signInButton) {
+            signIn_google();
         }
     }
 }
