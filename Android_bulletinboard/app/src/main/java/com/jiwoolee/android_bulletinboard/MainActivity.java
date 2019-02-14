@@ -5,7 +5,9 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.TextView;
 
@@ -36,11 +38,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private GoogleSignInClient mGoogleSignInClient;
     private static final int RC_SIGN_IN = 9001;
 
-    private RecyclerView mRecyclerView; //게시판
-    //private MainAdapter mAdapter;
-    //private List<Board> mBoardList;
-    private FirebaseFirestore mStore = FirebaseFirestore.getInstance();
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,12 +46,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         mStatusTextView = findViewById(R.id.status); //버튼 참조
         mEmailField = findViewById(R.id.fieldEmail);
         mPasswordField = findViewById(R.id.fieldPassword);
-
-        mRecyclerView = findViewById(R.id.recyclerview);
-        findViewById(R.id.floatingbutton).setOnClickListener(this);
-
-        //mBoardList = new ArrayList<>();
-
 
         findViewById(R.id.emailSignInButton).setOnClickListener(this);  //리스너 연결
         findViewById(R.id.emailCreateAccountButton).setOnClickListener(this);
