@@ -3,6 +3,7 @@ package com.jiwoolee.android_bulletinboard;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -23,7 +24,11 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +43,12 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private GoogleSignInClient mGoogleSignInClient;
     private static final int RC_SIGN_IN = 9001;
 
+    private RecyclerView mRecyclerView; //게시판
+    private List<Board> mBoardList;
+    private BoardAdapter mAdapter;
+
+    private FirebaseFirestore mStore = FirebaseFirestore.getInstance(); //firestore 연결
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,11 +57,13 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         mStatusTextView = findViewById(R.id.status); //버튼 참조
         mEmailField = findViewById(R.id.fieldEmail);
         mPasswordField = findViewById(R.id.fieldPassword);
+        mRecyclerView = findViewById(R.id.recyclerview);
 
         findViewById(R.id.emailSignInButton).setOnClickListener(this);  //리스너 연결
         findViewById(R.id.emailCreateAccountButton).setOnClickListener(this);
         findViewById(R.id.signOutButton).setOnClickListener(this);
         findViewById(R.id.signInButton).setOnClickListener(this);
+        findViewById(R.id.floatingbutton).setOnClickListener(this);
 
         //구글 클라이언트 연결
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -202,6 +215,47 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             signOut();
         } else if (i == R.id.signInButton) {
             signIn_google();
+        }else if (i == R.id.floatingbutton) {
+            //
+        }
+    }
+
+    private class BoardAdapter extends RecyclerView.Adapter<BoardAdapter.MainViewHolder>{
+        private List<Board> mBoardList;
+
+        public BoardAdapter(List<Board> mBoardList) {
+            this.mBoardList = mBoardList;
+        }
+
+        @NonNull
+        @Override
+        public MainViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
+            return new MainViewHolder(LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.item_main, viewGroup, false));
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull MainViewHolder mainViewHolder, int i) { //view
+            Board data = mBoardList.get(i);
+            mainViewHolder.mTitleTextView.setText(data.getTitle());
+            mainViewHolder.mNameTextView.setText(data.getName());
+        }
+
+        @Override
+        public int getItemCount() {
+            return mBoardList.size();
+        }
+
+        class MainViewHolder extends RecyclerView.ViewHolder{
+            private TextView mTitleTextView;
+            private TextView mNameTextView;
+
+            public MainViewHolder(@NonNull View itemView) {
+                super(itemView);
+
+                mTitleTextView = itemView.findViewById(R.id.item_title);
+                mNameTextView = itemView.findViewById(R.id.item_name);
+
+            }
         }
     }
 }
