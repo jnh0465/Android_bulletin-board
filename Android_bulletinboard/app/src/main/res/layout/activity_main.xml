@@ -54,9 +54,10 @@
         <android.support.v7.widget.RecyclerView
             android:id="@+id/recyclerview"
             android:layout_width="match_parent"
-            android:layout_height="469dp"
+            android:layout_height="match_parent"
             android:layout_alignParentBottom="true"
             android:layout_alignParentStart="true"
+            android:layout_marginTop="40dp"
             android:layout_weight="1"
             app:layoutManager="android.support.v7.widget.GridLayoutManager"></android.support.v7.widget.RecyclerView>
 

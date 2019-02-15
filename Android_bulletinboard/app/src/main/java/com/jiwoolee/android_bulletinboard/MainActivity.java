@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
@@ -24,6 +25,7 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
@@ -46,6 +48,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private RecyclerView mRecyclerView; //게시판
     private List<Board> mBoardList;
     private BoardAdapter mAdapter;
+
+    private String UserName;
 
     private FirebaseFirestore mStore = FirebaseFirestore.getInstance(); //firestore 연결
 
@@ -72,7 +76,27 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 .build();
 
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
-        mAuth = FirebaseAuth.getInstance(); //firebase 연결
+        mAuth = FirebaseAuth.getInstance(); //firebase 연결s
+
+        mBoardList = new ArrayList<>(); //게시판
+        mStore.collection("board").get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                if(task.isSuccessful()){
+                    for(DocumentSnapshot document : task.getResult()){
+                        String id = (String) document.getData().get("id");
+                        String title = (String) document.getData().get("title");
+                        String content = (String) document.getData().get("content");
+                        String name = (String) document.getData().get("name");
+
+                        Board data = new Board(id, title, content,name);
+                        mBoardList.add(data);
+                    }
+                        mAdapter = new BoardAdapter(mBoardList);
+                        mRecyclerView.setAdapter(mAdapter);
+                }
+            }
+        });
     }
 
     @Override
@@ -196,6 +220,10 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             findViewById(R.id.loginFields).setVisibility(View.GONE);
             findViewById(R.id.userFields).setVisibility(View.VISIBLE);
             findViewById(R.id.signInButton).setVisibility(View.GONE);
+
+            UserName = user.getEmail();
+            //Toast.makeText(getApplicationContext(),UserName, Toast.LENGTH_SHORT).show();
+
         } else { //현재 로그인 상태가 아니면
             mStatusTextView.setText(R.string.signed_out);
             findViewById(R.id.loginFields).setVisibility(View.VISIBLE);
@@ -216,7 +244,11 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         } else if (i == R.id.signInButton) {
             signIn_google();
         }else if (i == R.id.floatingbutton) {
-            //
+            Intent intent = new Intent(this, WriteActivity.class); //WriteActivity으로 UserName값 옮기기
+            Bundle bundle = new Bundle();
+            bundle.putString("name", UserName);
+            intent.putExtras(bundle);
+            startActivity(intent);
         }
     }
 
@@ -254,7 +286,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
                 mTitleTextView = itemView.findViewById(R.id.item_title);
                 mNameTextView = itemView.findViewById(R.id.item_name);
-
             }
         }
     }
