@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -25,6 +26,7 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -50,6 +52,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private BoardAdapter mAdapter;
 
     private String UserName;
+    private SwipeRefreshLayout swipe;
 
     private FirebaseFirestore mStore = FirebaseFirestore.getInstance(); //firestore 연결
 
@@ -62,6 +65,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         mEmailField = findViewById(R.id.fieldEmail);
         mPasswordField = findViewById(R.id.fieldPassword);
         mRecyclerView = findViewById(R.id.recyclerview);
+        swipe = findViewById(R.id.swipe);
 
         findViewById(R.id.emailSignInButton).setOnClickListener(this);  //리스너 연결
         findViewById(R.id.emailCreateAccountButton).setOnClickListener(this);
@@ -76,27 +80,36 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 .build();
 
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
-        mAuth = FirebaseAuth.getInstance(); //firebase 연결s
+        mAuth = FirebaseAuth.getInstance(); //firebase 연결
 
-        mBoardList = new ArrayList<>(); //게시판
-        mStore.collection("board").get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+        swipe.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() { //위로 당겨서 새로고침시
             @Override
-            public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                if(task.isSuccessful()){
-                    for(DocumentSnapshot document : task.getResult()){
-                        String id = (String) document.getData().get("id");
-                        String title = (String) document.getData().get("title");
-                        String content = (String) document.getData().get("content");
-                        String name = (String) document.getData().get("name");
-
-                        Board data = new Board(id, title, content,name);
-                        mBoardList.add(data);
-                    }
-                        mAdapter = new BoardAdapter(mBoardList);
-                        mRecyclerView.setAdapter(mAdapter);
-                }
+            public void onRefresh() {
+                UploadBoard();
+                swipe.setRefreshing(false); //새로고침 종료
             }
         });
+    }
+
+    private void UploadBoard(){
+        mBoardList = new ArrayList<>();          //게시판
+        mStore.collection("board") //실시간업로드
+                .addSnapshotListener(new EventListener<QuerySnapshot>() {
+                    @Override
+                    public void onEvent(@Nullable QuerySnapshot snapshot, @Nullable FirebaseFirestoreException e) {
+                        for(DocumentChange dc : snapshot.getDocumentChanges()){
+                            String id = (String) dc.getDocument().getData().get("id");
+                            String title = (String) dc.getDocument().getData().get("title");
+                            String content = (String) dc.getDocument().getData().get("content");
+                            String name = (String) dc.getDocument().getData().get("name");
+
+                            Board data = new Board(id, title, content,name);
+                            mBoardList.add(data);
+                        }
+                        mAdapter = new BoardAdapter(mBoardList);
+                        mRecyclerView.setAdapter(mAdapter);
+                    }
+                });
     }
 
     @Override
@@ -104,6 +117,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         super.onStart();
         FirebaseUser currentUser = mAuth.getCurrentUser(); //현재 로그인 되어있는지 확인
         updateUI(currentUser);                             //로그인 여부에 따라 UI 업데이트
+        UploadBoard(); //게시판 실시간업로드
     }
 
     private void createAccount(String email, String password) { //이메일계정생성
