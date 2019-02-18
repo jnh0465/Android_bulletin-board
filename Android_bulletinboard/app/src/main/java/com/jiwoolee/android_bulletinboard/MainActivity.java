@@ -1,10 +1,12 @@
 package com.jiwoolee.android_bulletinboard;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -38,7 +40,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends BaseActivity implements View.OnClickListener {
-
     private TextView mStatusTextView; //로그인여부 상태
     private EditText mEmailField;     //회원가입필드
     private EditText mPasswordField;
@@ -68,7 +69,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         swipe = findViewById(R.id.swipe);
 
         findViewById(R.id.emailSignInButton).setOnClickListener(this);  //리스너 연결
-        findViewById(R.id.emailCreateAccountButton).setOnClickListener(this);
         findViewById(R.id.signOutButton).setOnClickListener(this);
         findViewById(R.id.signInButton).setOnClickListener(this);
         findViewById(R.id.floatingbutton).setOnClickListener(this);
@@ -91,9 +91,17 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         });
     }
 
-    private void UploadBoard(){
-        mBoardList = new ArrayList<>();          //게시판
-        mStore.collection("board") //실시간업로드
+    @Override
+    public void onStart() { //시작시
+        super.onStart();
+        FirebaseUser currentUser = mAuth.getCurrentUser(); //현재 로그인 되어있는지 확인
+        updateUI(currentUser);                             //로그인 여부에 따라 UI 업데이트
+        UploadBoard(); //게시판 실시간업로드
+    }
+
+    private void UploadBoard(){ //게시판 실시간업로드
+        mBoardList = new ArrayList<>();
+        mStore.collection("board")
                 .addSnapshotListener(new EventListener<QuerySnapshot>() {
                     @Override
                     public void onEvent(@Nullable QuerySnapshot snapshot, @Nullable FirebaseFirestoreException e) {
@@ -112,32 +120,11 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 });
     }
 
-    @Override
-    public void onStart() { //시작시
-        super.onStart();
-        FirebaseUser currentUser = mAuth.getCurrentUser(); //현재 로그인 되어있는지 확인
-        updateUI(currentUser);                             //로그인 여부에 따라 UI 업데이트
-        UploadBoard(); //게시판 실시간업로드
-    }
+    //로그인////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private void createAccount(String email, String password) { //이메일계정생성
-        if (!validateForm()) { return; } //폼이 비었으면 return
-
-        showProgressDialog();
-
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            updateUI(user);
-                        } else {
-                            updateUI(null);
-                        }
-                        hideProgressDialog();
-                    }
-                });
+    private void signIn_google() { //구글로그인
+        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, RC_SIGN_IN);
     }
 
     @Override
@@ -167,17 +154,12 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         }
     }
 
-    private void signIn_google() {
-        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-        startActivityForResult(signInIntent, RC_SIGN_IN);
-    }
-
     private void signIn(String email, String password) { //로그인
         if (!validateForm()) {
             return;
         }
 
-        showProgressDialog(); //프로그래스
+        showProgressDialog(); //프로그래스바
 
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
@@ -199,14 +181,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 });
     }
 
-    private void signOut() { //로그아웃
-        mAuth.signOut();
-        updateUI(null);
-    }
-
-    private boolean validateForm() { //로그인 폼
+    private boolean validateForm() { //로그인 폼 채움 여부
         boolean valid = true;
-
         String email = mEmailField.getText().toString();
         if (TextUtils.isEmpty(email)) {
             mEmailField.setError("Required.");
@@ -226,6 +202,69 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         return valid;
     }
 
+    private void signOut() { //로그아웃
+        mAuth.signOut();
+        updateUI(null);
+    }
+
+    //회원가입//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public void btn_createAccount(View view){     //커스텀 다이얼로그
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("회원 가입");   //제목
+        builder.setIcon(R.mipmap.ic_launcher); //아이콘
+
+        //다이얼로그를 통해 보여줄 뷰 설정
+        LayoutInflater inflater = getLayoutInflater();
+        View v1 = inflater.inflate(R.layout.custom_dialog, null);
+        builder.setView(v1);
+
+        DialogListener listener = new DialogListener();
+
+        builder.setPositiveButton("확인",listener);
+        builder.setNegativeButton("취소", listener);
+
+        builder.show(); //띄우기
+    }
+
+    class DialogListener implements DialogInterface.OnClickListener{     //커스텀 다이얼로그 리스너
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            //AlertDialog가 가지고 있는 뷰를 가져옴
+            AlertDialog alert = (AlertDialog)dialog;
+            EditText edit1 = (EditText)alert.findViewById(R.id.editText);
+            EditText edit2 = (EditText)alert.findViewById(R.id.editText2);
+
+            String str1 = edit1.getText().toString(); //문자열가져옴
+            String str2 = edit2.getText().toString();
+
+            mEmailField.setText(str1); //폼에 채우기
+            mPasswordField.setText(str2);
+
+            createAccount(str1, str2);
+        }
+    }
+
+    private void createAccount(String email, String password) { //이메일계정생성
+        if (!validateForm()) { return; } //폼이 비었으면 return
+
+        showProgressDialog();
+
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()) {
+                            FirebaseUser user = mAuth.getCurrentUser();
+                            updateUI(user);
+                        } else {
+                            updateUI(null);
+                        }
+                        hideProgressDialog();
+                    }
+                });
+    }
+
+    //UI////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     private void updateUI(FirebaseUser user) { //UI 업데이트
         hideProgressDialog();
         if (user != null) { //현재 로그인 상태 이면
@@ -249,9 +288,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     @Override
     public void onClick(View v) { //버튼클릭시
         int i = v.getId();
-        if (i == R.id.emailCreateAccountButton) {
-            createAccount(mEmailField.getText().toString(), mPasswordField.getText().toString());
-        } else if (i == R.id.emailSignInButton) {
+        if (i == R.id.emailSignInButton) {
             signIn(mEmailField.getText().toString(), mPasswordField.getText().toString());
         } else if (i == R.id.signOutButton) {
             signOut();
@@ -266,7 +303,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         }
     }
 
-    private class BoardAdapter extends RecyclerView.Adapter<BoardAdapter.MainViewHolder>{
+    //Adapter///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    private class BoardAdapter extends RecyclerView.Adapter<BoardAdapter.MainViewHolder>{ //게시판 어뎁터
         private List<Board> mBoardList;
 
         public BoardAdapter(List<Board> mBoardList) {
