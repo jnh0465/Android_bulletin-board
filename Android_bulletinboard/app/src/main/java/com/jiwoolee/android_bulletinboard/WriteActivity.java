@@ -14,6 +14,8 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,9 +39,10 @@ public class WriteActivity extends AppCompatActivity implements View.OnClickList
 
         findViewById(R.id.write_upload).setOnClickListener(this);
 
-        Intent intent = getIntent(); //MainActivity에서 UserName값 가져오기
+        Intent intent = getIntent();
         Bundle bundle = intent.getExtras();
-        String UserName = bundle.getString("name");
+        String UserName = bundle.getString("name"); //MainActivity에서 UserName값 가져오기
+
         //Toast.makeText(getApplicationContext(),UserName, Toast.LENGTH_SHORT).show();
         mWriteName.setText(UserName);
     }
@@ -48,10 +51,22 @@ public class WriteActivity extends AppCompatActivity implements View.OnClickList
     public void onClick(View view) {
         id = mStore.collection("board").document().getId();
         Map<String, Object> post = new HashMap<>();
+
+        Intent intent = getIntent();
+        Bundle bundle = intent.getExtras();
+        Integer Bnum = bundle.getInt("bunm"); //MainActivity에서 bunm값 가져오기
+
+        long now = System.currentTimeMillis();
+        Date date = new Date(now);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+        String getTime = sdf.format(date);
+
         post.put("id", id);
         post.put("title", mWriteTitle.getText().toString());
         post.put("content", mWriteContent.getText().toString());
         post.put("name", mWriteName.getText().toString());
+        post.put("bnum", Bnum);
+        post.put("time", getTime);
 
         mStore.collection("board").document(id).set(post)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {

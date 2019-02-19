@@ -1,5 +1,6 @@
 package com.jiwoolee.android_bulletinboard;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
@@ -9,6 +10,7 @@ import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,22 +24,30 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends BaseActivity implements View.OnClickListener {
     private TextView mStatusTextView; //로그인여부 상태
@@ -96,28 +106,29 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         super.onStart();
         FirebaseUser currentUser = mAuth.getCurrentUser(); //현재 로그인 되어있는지 확인
         updateUI(currentUser);                             //로그인 여부에 따라 UI 업데이트
-        UploadBoard(); //게시판 실시간업로드
+        UploadBoard(); //실시간 업로드
     }
 
     private void UploadBoard(){ //게시판 실시간업로드
         mBoardList = new ArrayList<>();
-        mStore.collection("board")
-                .addSnapshotListener(new EventListener<QuerySnapshot>() {
-                    @Override
-                    public void onEvent(@Nullable QuerySnapshot snapshot, @Nullable FirebaseFirestoreException e) {
-                        for(DocumentChange dc : snapshot.getDocumentChanges()){
-                            String id = (String) dc.getDocument().getData().get("id");
-                            String title = (String) dc.getDocument().getData().get("title");
-                            String content = (String) dc.getDocument().getData().get("content");
-                            String name = (String) dc.getDocument().getData().get("name");
 
-                            Board data = new Board(id, title, content,name);
-                            mBoardList.add(data);
-                        }
-                        mAdapter = new BoardAdapter(mBoardList);
-                        mRecyclerView.setAdapter(mAdapter);
-                    }
-                });
+        mStore.collection("board").orderBy("time", Query.Direction.DESCENDING) //작성시간 역순으로 정렬
+                .addSnapshotListener(new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot snapshot, @Nullable FirebaseFirestoreException e) {
+                for(DocumentChange dc : snapshot.getDocumentChanges()){
+                    String id = (String) dc.getDocument().getData().get("id");
+                    String title = (String) dc.getDocument().getData().get("title");
+                    String content = (String) dc.getDocument().getData().get("content");
+                    String name = (String) dc.getDocument().getData().get("name");
+
+                    Board data = new Board(id, title, content, name);
+                    mBoardList.add(data);
+                }
+                mAdapter = new BoardAdapter(mBoardList);
+                mRecyclerView.setAdapter(mAdapter);
+            }
+        });
     }
 
     //로그인////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -296,8 +307,12 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             signIn_google();
         }else if (i == R.id.floatingbutton) {
             Intent intent = new Intent(this, WriteActivity.class); //WriteActivity으로 UserName값 옮기기
-            Bundle bundle = new Bundle();
-            bundle.putString("name", UserName);
+                Bundle bundle = new Bundle();
+                bundle.putString("name", UserName);
+
+                mAdapter = new BoardAdapter(mBoardList);
+                Integer bnum = mAdapter.getItemCount(); //글 개수를 받아와서 게시판넘버(bnum)에 담아 WriteActivity로 옮기기
+                bundle.putInt("bunm", bnum);
             intent.putExtras(bundle);
             startActivity(intent);
         }
@@ -318,10 +333,42 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         }
 
         @Override
-        public void onBindViewHolder(@NonNull MainViewHolder mainViewHolder, int i) { //view
+        public void onBindViewHolder(@NonNull MainViewHolder mainViewHolder, final int i) { //view\
             Board data = mBoardList.get(i);
             mainViewHolder.mTitleTextView.setText(data.getTitle());
             mainViewHolder.mNameTextView.setText(data.getName());
+            mainViewHolder.mContentTextView.setText(data.getContent());
+
+            mainViewHolder.itemView.setOnClickListener(new View.OnClickListener() { //리스트 클릭시 리스너
+                @Override
+                public void onClick(View v) { //클릭시 삭제
+                    String id = mBoardList.get(i).getId(); //클릭한 인덱스의 아이디값 가져오기
+
+                    CollectionReference cr = mStore.collection("board");
+                    Query query = cr.whereEqualTo("id", id);
+                    query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                        @Override
+                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                            if(task.isSuccessful()) {
+                                for(QueryDocumentSnapshot dc : task.getResult()){
+                                    String id = (String) dc.getData().get("id");
+                                    Toast.makeText(getApplicationContext(), id, Toast.LENGTH_SHORT).show();
+
+                                    mStore.collection("board").document(id)
+                                            .delete()
+                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                @Override
+                                                public void onSuccess(Void aVoid) {
+                                                    Toast.makeText(getApplicationContext(), "삭제 완료", Toast.LENGTH_SHORT).show();
+                                                    UploadBoard();
+                                                }
+                                            });
+                                }
+                            }
+                        }
+                    });
+                }
+            });
         }
 
         @Override
@@ -332,12 +379,14 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         class MainViewHolder extends RecyclerView.ViewHolder{
             private TextView mTitleTextView;
             private TextView mNameTextView;
+            private TextView mContentTextView;
 
             public MainViewHolder(@NonNull View itemView) {
                 super(itemView);
 
                 mTitleTextView = itemView.findViewById(R.id.item_title);
                 mNameTextView = itemView.findViewById(R.id.item_name);
+                mContentTextView = itemView.findViewById(R.id.item_content);
             }
         }
     }

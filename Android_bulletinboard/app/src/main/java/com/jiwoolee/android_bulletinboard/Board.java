@@ -6,9 +6,6 @@ public class Board {
     private String content;
     private String name;
 
-    public Board(){
-    }
-
     //alt+insert
 
     public Board(String id, String title, String content, String name) {
