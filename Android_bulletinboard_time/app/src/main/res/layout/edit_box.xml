@@ -1,46 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
-    android:orientation="vertical"
-    tools:context=".MainActivity">
+    android:orientation="vertical">
 
     <EditText
+        android:id="@+id/write_title"
+
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-
-        android:id="@+id/write_title"
         android:hint="Title"
         android:textSize="20sp"
         android:textColor="@android:color/black"
         tools:ignore="HardcodedText"/>
 
     <TextView
+        android:id="@+id/write_name"
+
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-
-        android:id="@+id/write_name"
         android:background="@null"
         android:textSize="16sp"
-        tools:ignore="HardcodedText" />
+        app:layout_constraintTop_toBottomOf="@+id/write_title"/>
 
     <EditText
         android:id="@+id/write_content"
-        android:layout_width="match_parent"
 
-        android:layout_height="257dp"
+        android:layout_width="match_parent"
+        android:layout_height="224dp"
         android:background="@null"
         android:hint="Contents"
         android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@+id/write_name"
         tools:ignore="HardcodedText" />
 
     <Button
         android:id="@+id/write_upload"
+
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="업로드"
         android:layout_gravity="right"
-        tools:ignore="HardcodedText" />
+        tools:ignore="HardcodedText"
+        app:layout_constraintTop_toBottomOf="@+id/write_content"/>
 
-</LinearLayout>
+</android.support.constraint.ConstraintLayout>

@@ -14,6 +14,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -75,7 +76,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         mStatusTextView = findViewById(R.id.status); //버튼 참조
         mEmailField = findViewById(R.id.fieldEmail);
         mPasswordField = findViewById(R.id.fieldPassword);
+
         mRecyclerView = findViewById(R.id.recyclerview);
+
         swipe = findViewById(R.id.swipe);
 
         findViewById(R.id.emailSignInButton).setOnClickListener(this);  //리스너 연결
@@ -279,8 +282,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private void updateUI(FirebaseUser user) { //UI 업데이트
         hideProgressDialog();
         if (user != null) { //현재 로그인 상태 이면
-            mStatusTextView.setText(getString(R.string.emailpassword_status_fmt,
-                    user.getEmail(), user.isEmailVerified()));
+            mStatusTextView.setText(getString(R.string.emailpassword_status_fmt, user.getEmail(), user.isEmailVerified()));
             findViewById(R.id.loginFields).setVisibility(View.GONE);
             findViewById(R.id.userFields).setVisibility(View.VISIBLE);
             findViewById(R.id.signInButton).setVisibility(View.GONE);
@@ -306,15 +308,53 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         } else if (i == R.id.signInButton) {
             signIn_google();
         }else if (i == R.id.floatingbutton) {
-            Intent intent = new Intent(this, WriteActivity.class); //WriteActivity으로 UserName값 옮기기
-                Bundle bundle = new Bundle();
-                bundle.putString("name", UserName);
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
+            builder.setView(view);
 
-                mAdapter = new BoardAdapter(mBoardList);
-                Integer bnum = mAdapter.getItemCount(); //글 개수를 받아와서 게시판넘버(bnum)에 담아 WriteActivity로 옮기기
-                bundle.putInt("bunm", bnum);
-            intent.putExtras(bundle);
-            startActivity(intent);
+            Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload);
+            final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title);
+            final EditText mWriteContent = (EditText) view.findViewById(R.id.write_content);
+            final TextView mWriteName = (TextView) view.findViewById(R.id.write_name);
+
+            mWriteName.setText(UserName);
+
+            final AlertDialog dialog = builder.create();
+            ButtonSubmit.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    String id = mStore.collection("board").document().getId();
+                    Map<String, Object> post = new HashMap<>();
+
+                    long now = System.currentTimeMillis();
+                    Date date = new Date(now);
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+                    String getTime = sdf.format(date);
+
+                    post.put("id", id);
+                    post.put("title", mWriteTitle.getText().toString());
+                    post.put("content", mWriteContent.getText().toString());
+                    post.put("name", mWriteName.getText().toString());
+                    post.put("time", getTime);
+
+                    mStore.collection("board").document(id).set(post)
+                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                @Override
+                                public void onSuccess(Void aVoid) {
+                                    Toast.makeText(MainActivity.this, "업로드 완료", Toast.LENGTH_SHORT).show();
+                                    UploadBoard();
+                                }
+                            })
+                            .addOnFailureListener(new OnFailureListener() {
+                                @Override
+                                public void onFailure(@NonNull Exception e) {
+                                    Toast.makeText(MainActivity.this, "업로드 실패", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                    //mAdapter.notifyDataSetChanged(); //변경된 데이터를 화면에 반영
+                    dialog.dismiss();
+                }
+            });
+            dialog.show();
         }
     }
 
