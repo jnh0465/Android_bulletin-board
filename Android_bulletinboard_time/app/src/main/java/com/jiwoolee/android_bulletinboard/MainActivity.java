@@ -11,7 +11,10 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -312,14 +315,14 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
             builder.setView(view);
 
-            Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload);
             final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title);
             final EditText mWriteContent = (EditText) view.findViewById(R.id.write_content);
             final TextView mWriteName = (TextView) view.findViewById(R.id.write_name);
-
             mWriteName.setText(UserName);
 
             final AlertDialog dialog = builder.create();
+
+            Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload);
             ButtonSubmit.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     String id = mStore.collection("board").document().getId();
@@ -336,7 +339,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                     post.put("name", mWriteName.getText().toString());
                     post.put("time", getTime);
 
-                    mStore.collection("board").document(id).set(post)
+                    mStore.collection("board").document(id).set(post) //firsestore db에 업로드
                             .addOnSuccessListener(new OnSuccessListener<Void>() {
                                 @Override
                                 public void onSuccess(Void aVoid) {
@@ -362,6 +365,46 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private class BoardAdapter extends RecyclerView.Adapter<BoardAdapter.MainViewHolder>{ //게시판 어뎁터
         private List<Board> mBoardList;
 
+        class MainViewHolder extends RecyclerView.ViewHolder implements View.OnCreateContextMenuListener {
+            private TextView mTitleTextView;
+            private TextView mNameTextView;
+            private TextView mContentTextView;
+
+            public MainViewHolder(@NonNull View itemView) {
+                super(itemView);
+                mTitleTextView = itemView.findViewById(R.id.item_title);
+                mNameTextView = itemView.findViewById(R.id.item_name);
+                mContentTextView = itemView.findViewById(R.id.item_content);
+
+                itemView.setOnCreateContextMenuListener(this); //리스너
+            }
+
+            @Override
+            public void onCreateContextMenu(ContextMenu contextMenu, View view, ContextMenu.ContextMenuInfo contextMenuInfo) {// 메뉴
+                MenuItem Edit = contextMenu.add(Menu.NONE, 10, 1, "편집");
+                MenuItem Delete = contextMenu.add(Menu.NONE, 20, 2, "삭제");
+                Edit.setOnMenuItemClickListener(onEditMenu);
+                Delete.setOnMenuItemClickListener(onEditMenu);
+            }
+
+            private final MenuItem.OnMenuItemClickListener onEditMenu = new MenuItem.OnMenuItemClickListener() { //컨텍스트 메뉴 클릭시
+                @Override
+                public boolean onMenuItemClick(MenuItem item){
+                    switch (item.getItemId()) {
+                        case 10: //편집
+                            break;
+
+                        case 20: //삭제
+                            mBoardList.remove(getAdapterPosition());
+                            notifyItemRemoved(getAdapterPosition());
+                            notifyItemRangeChanged(getAdapterPosition(), mBoardList.size());
+                            break;
+                    }
+                    return true;
+                }
+            };
+        }
+
         public BoardAdapter(List<Board> mBoardList) {
             this.mBoardList = mBoardList;
         }
@@ -385,16 +428,15 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                     String id = mBoardList.get(i).getId(); //클릭한 인덱스의 아이디값 가져오기
 
                     CollectionReference cr = mStore.collection("board");
-                    Query query = cr.whereEqualTo("id", id);
+                    Query query = cr.whereEqualTo("id", id); //id로 쿼리
                     query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                         @Override
                         public void onComplete(@NonNull Task<QuerySnapshot> task) {
                             if(task.isSuccessful()) {
                                 for(QueryDocumentSnapshot dc : task.getResult()){
                                     String id = (String) dc.getData().get("id");
-                                    Toast.makeText(getApplicationContext(), id, Toast.LENGTH_SHORT).show();
-
-                                    mStore.collection("board").document(id)
+                                    //Toast.makeText(getApplicationContext(), id, Toast.LENGTH_SHORT).show();
+                                    mStore.collection("board").document(id) //해당 id 작성글을 삭제
                                             .delete()
                                             .addOnSuccessListener(new OnSuccessListener<Void>() {
                                                 @Override
@@ -410,24 +452,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 }
             });
         }
-
         @Override
         public int getItemCount() {
             return mBoardList.size();
-        }
-
-        class MainViewHolder extends RecyclerView.ViewHolder{
-            private TextView mTitleTextView;
-            private TextView mNameTextView;
-            private TextView mContentTextView;
-
-            public MainViewHolder(@NonNull View itemView) {
-                super(itemView);
-
-                mTitleTextView = itemView.findViewById(R.id.item_title);
-                mNameTextView = itemView.findViewById(R.id.item_name);
-                mContentTextView = itemView.findViewById(R.id.item_content);
-            }
         }
     }
 }
