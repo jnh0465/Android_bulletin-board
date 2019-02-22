@@ -392,12 +392,84 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 public boolean onMenuItemClick(MenuItem item){
                     switch (item.getItemId()) {
                         case 10: //편집
+                            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                            View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
+                            builder.setView(view);
+
+                            final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title);
+                            final EditText mWriteContent = (EditText) view.findViewById(R.id.write_content);
+                            final TextView mWriteName = (TextView) view.findViewById(R.id.write_name);
+                            mWriteName.setText(UserName);
+
+                            final AlertDialog dialog = builder.create();
+
+                            mWriteTitle.setText(mBoardList.get(getAdapterPosition()).getTitle());
+                            mWriteContent.setText(mBoardList.get(getAdapterPosition()).getContent());
+                            //mWriteName.setText(mBoardList.get(getAdapterPosition()).getName());
+
+                            final Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload);
+                            ButtonSubmit.setOnClickListener(new View.OnClickListener() {
+                                public void onClick(View v) {
+                                    //String id = mStore.collection("board").document().getId();
+                                    int a= getAdapterPosition();
+                                    //String id = mBoardList.getAdapterPosition(); //클릭한 인덱스의 아이디값 가져오기
+                                    //String id = mBoardList.get(a).getId(); //클릭한 인덱스의 아이디값 가져오기
+//
+//                                    Log.d("dddddd", id);
+//
+////                                    Map<String, Object> post = new HashMap<>();
+////
+////                                    post.put("id", id);
+////                                    post.put("title", mWriteTitle.getText().toString());
+////                                    post.put("content", mWriteContent.getText().toString());
+//
+//                                    mStore.collection("board").document(id).update("title", true)
+//                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+//                                                @Override
+//                                                public void onSuccess(Void aVoid) {
+//                                                    Toast.makeText(MainActivity.this, "업로드 완료", Toast.LENGTH_SHORT).show();
+//                                                    UploadBoard();
+//                                                }
+//                                            })
+//                                            .addOnFailureListener(new OnFailureListener() {
+//                                                @Override
+//                                                public void onFailure(@NonNull Exception e) {
+//                                                    Log.w("dddddd", "Error updating document", e);
+//                                                    Toast.makeText(MainActivity.this, "업로드 실패", Toast.LENGTH_SHORT).show();
+//                                                }
+//                                            });
+                                    dialog.dismiss();
+                                }
+                            });
+                            dialog.show();
                             break;
 
                         case 20: //삭제
-                            mBoardList.remove(getAdapterPosition());
-                            notifyItemRemoved(getAdapterPosition());
-                            notifyItemRangeChanged(getAdapterPosition(), mBoardList.size());
+                            String id = mBoardList.get(getAdapterPosition()).getId(); //클릭한 인덱스의 아이디값 가져오기
+                            Toast.makeText(MainActivity.this, id, Toast.LENGTH_SHORT).show();
+
+                            CollectionReference cr = mStore.collection("board");
+                            Query query = cr.whereEqualTo("id", id); //id로 쿼리
+                            query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                @Override
+                                public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                                    if(task.isSuccessful()) {
+                                        for(QueryDocumentSnapshot dc : task.getResult()){
+                                            String id = (String) dc.getData().get("id");
+                                            //Toast.makeText(getApplicationContext(), id, Toast.LENGTH_SHORT).show();
+                                            mStore.collection("board").document(id) //해당 id 작성글을 삭제
+                                                    .delete()
+                                                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                        @Override
+                                                        public void onSuccess(Void aVoid) {
+                                                            Toast.makeText(getApplicationContext(), "삭제 완료", Toast.LENGTH_SHORT).show();
+                                                            UploadBoard();
+                                                        }
+                                                    });
+                                        }
+                                    }
+                                }
+                            });
                             break;
                     }
                     return true;
@@ -421,36 +493,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             mainViewHolder.mTitleTextView.setText(data.getTitle());
             mainViewHolder.mNameTextView.setText(data.getName());
             mainViewHolder.mContentTextView.setText(data.getContent());
-
-            mainViewHolder.itemView.setOnClickListener(new View.OnClickListener() { //리스트 클릭시 리스너
-                @Override
-                public void onClick(View v) { //클릭시 삭제
-                    String id = mBoardList.get(i).getId(); //클릭한 인덱스의 아이디값 가져오기
-
-                    CollectionReference cr = mStore.collection("board");
-                    Query query = cr.whereEqualTo("id", id); //id로 쿼리
-                    query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                        @Override
-                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                            if(task.isSuccessful()) {
-                                for(QueryDocumentSnapshot dc : task.getResult()){
-                                    String id = (String) dc.getData().get("id");
-                                    //Toast.makeText(getApplicationContext(), id, Toast.LENGTH_SHORT).show();
-                                    mStore.collection("board").document(id) //해당 id 작성글을 삭제
-                                            .delete()
-                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                                @Override
-                                                public void onSuccess(Void aVoid) {
-                                                    Toast.makeText(getApplicationContext(), "삭제 완료", Toast.LENGTH_SHORT).show();
-                                                    UploadBoard();
-                                                }
-                                            });
-                                }
-                            }
-                        }
-                    });
-                }
-            });
         }
         @Override
         public int getItemCount() {
