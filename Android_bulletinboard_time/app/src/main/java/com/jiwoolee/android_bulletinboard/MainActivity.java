@@ -117,9 +117,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
     private void UploadBoard(){ //게시판 실시간업로드
         mBoardList = new ArrayList<>();
-
-        mStore.collection("board").orderBy("time", Query.Direction.DESCENDING) //작성시간 역순으로 정렬
-                .addSnapshotListener(new EventListener<QuerySnapshot>() {
+//작성시간 역순으로 정렬
+        mStore.collection("board").orderBy("time", Query.Direction.DESCENDING).addSnapshotListener(new EventListener<QuerySnapshot>() {
             @Override
             public void onEvent(@Nullable QuerySnapshot snapshot, @Nullable FirebaseFirestoreException e) {
                 for(DocumentChange dc : snapshot.getDocumentChanges()){
@@ -325,7 +324,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload);
             ButtonSubmit.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    String id = mStore.collection("board").document().getId();
+                    String id = (String)mStore.collection("board").document().getId();
                     Map<String, Object> post = new HashMap<>();
 
                     long now = System.currentTimeMillis();
@@ -407,37 +406,39 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                             mWriteContent.setText(mBoardList.get(getAdapterPosition()).getContent());
                             //mWriteName.setText(mBoardList.get(getAdapterPosition()).getName());
 
-                            final Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload);
+                            Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload);
                             ButtonSubmit.setOnClickListener(new View.OnClickListener() {
                                 public void onClick(View v) {
-                                    //String id = mStore.collection("board").document().getId();
-                                    int a= getAdapterPosition();
-                                    //String id = mBoardList.getAdapterPosition(); //클릭한 인덱스의 아이디값 가져오기
-                                    //String id = mBoardList.get(a).getId(); //클릭한 인덱스의 아이디값 가져오기
-//
-//                                    Log.d("dddddd", id);
-//
-////                                    Map<String, Object> post = new HashMap<>();
-////
-////                                    post.put("id", id);
-////                                    post.put("title", mWriteTitle.getText().toString());
-////                                    post.put("content", mWriteContent.getText().toString());
-//
-//                                    mStore.collection("board").document(id).update("title", true)
-//                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
-//                                                @Override
-//                                                public void onSuccess(Void aVoid) {
-//                                                    Toast.makeText(MainActivity.this, "업로드 완료", Toast.LENGTH_SHORT).show();
-//                                                    UploadBoard();
-//                                                }
-//                                            })
-//                                            .addOnFailureListener(new OnFailureListener() {
-//                                                @Override
-//                                                public void onFailure(@NonNull Exception e) {
-//                                                    Log.w("dddddd", "Error updating document", e);
-//                                                    Toast.makeText(MainActivity.this, "업로드 실패", Toast.LENGTH_SHORT).show();
-//                                                }
-//                                            });
+
+                                    String id = mBoardList.get(getAdapterPosition()).getId(); //클릭한 인덱스의 아이디값 가져오기
+                                    Map<String, Object> post = new HashMap<>();
+
+                                    long now = System.currentTimeMillis();
+                                    Date date = new Date(now);
+                                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+                                    String getTime = sdf.format(date);
+
+                                    post.put("id", id);
+                                    post.put("title", mWriteTitle.getText().toString());
+                                    post.put("content", mWriteContent.getText().toString());
+                                    post.put("name", mWriteName.getText().toString());
+                                    post.put("time", getTime);
+
+                                    mStore.collection("board").document(id).set(post)
+                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                @Override
+                                                public void onSuccess(Void aVoid) {
+                                                    Toast.makeText(MainActivity.this, "업로드 완료", Toast.LENGTH_SHORT).show();
+                                                    UploadBoard();
+                                                }
+                                            })
+                                            .addOnFailureListener(new OnFailureListener() {
+                                                @Override
+                                                public void onFailure(@NonNull Exception e) {
+                                                    Log.w("dddddd", "Error updating document", e);
+                                                    Toast.makeText(MainActivity.this, "업로드 실패", Toast.LENGTH_SHORT).show();
+                                                }
+                                            });
                                     dialog.dismiss();
                                 }
                             });
@@ -446,7 +447,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
                         case 20: //삭제
                             String id = mBoardList.get(getAdapterPosition()).getId(); //클릭한 인덱스의 아이디값 가져오기
-                            Toast.makeText(MainActivity.this, id, Toast.LENGTH_SHORT).show();
+                            //Toast.makeText(MainActivity.this, id, Toast.LENGTH_SHORT).show();
 
                             CollectionReference cr = mStore.collection("board");
                             Query query = cr.whereEqualTo("id", id); //id로 쿼리
