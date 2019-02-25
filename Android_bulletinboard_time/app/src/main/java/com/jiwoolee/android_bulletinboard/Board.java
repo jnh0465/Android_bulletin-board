@@ -5,14 +5,16 @@ public class Board {
     private String title;
     private String content;
     private String name;
+    private String time;
 
     //alt+insert
 
-    public Board(String id, String title, String content, String name) {
+    public Board(String id, String title, String content, String name, String time) {
         this.id = id;
         this.title = title;
         this.content = content;
         this.name = name;
+        this.time = time;
     }
 
     public String getId() {
@@ -47,6 +49,14 @@ public class Board {
         this.name = name;
     }
 
+    public String getTime() {
+        return time;
+    }
+
+    public void setTime(String time) {
+        this.time = time;
+    }
+
     @Override
     public String toString() {
         return "Board{" +
@@ -54,6 +64,7 @@ public class Board {
                 ", title='" + title + '\'' +
                 ", content='" + content + '\'' +
                 ", name='" + name + '\'' +
+                ", time='" + time + '\'' +
                 '}';
     }
 }

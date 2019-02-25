@@ -1,6 +1,5 @@
 package com.jiwoolee.android_bulletinboard;
 
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
@@ -38,7 +37,6 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentChange;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
@@ -117,8 +115,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
     private void UploadBoard(){ //게시판 실시간업로드
         mBoardList = new ArrayList<>();
-//작성시간 역순으로 정렬
-        mStore.collection("board").orderBy("time", Query.Direction.DESCENDING).addSnapshotListener(new EventListener<QuerySnapshot>() {
+
+        mStore.collection("board").orderBy("time", Query.Direction.DESCENDING).addSnapshotListener(new EventListener<QuerySnapshot>() { //작성시간 역순으로 정렬
             @Override
             public void onEvent(@Nullable QuerySnapshot snapshot, @Nullable FirebaseFirestoreException e) {
                 for(DocumentChange dc : snapshot.getDocumentChanges()){
@@ -126,8 +124,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                     String title = (String) dc.getDocument().getData().get("title");
                     String content = (String) dc.getDocument().getData().get("content");
                     String name = (String) dc.getDocument().getData().get("name");
+                    String time = (String) dc.getDocument().getData().get("time");
 
-                    Board data = new Board(id, title, content, name);
+                    Board data = new Board(id, title, content, name, time);
                     mBoardList.add(data);
                 }
                 mAdapter = new BoardAdapter(mBoardList);
@@ -214,7 +213,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         } else {
             mPasswordField.setError(null);
         }
-
         return valid;
     }
 
@@ -310,16 +308,18 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         } else if (i == R.id.signInButton) {
             signIn_google();
         }else if (i == R.id.floatingbutton) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this); //dialog 선언
             View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
             builder.setView(view);
 
-            final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title);
+            final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title); //참조
             final EditText mWriteContent = (EditText) view.findViewById(R.id.write_content);
             final TextView mWriteName = (TextView) view.findViewById(R.id.write_name);
-            mWriteName.setText(UserName);
+            final TextView mWriteTime = (TextView) view.findViewById(R.id.write_time);
 
-            final AlertDialog dialog = builder.create();
+            mWriteName.setText(UserName); //mWriteName에 이메일 넣어주기
+
+            final AlertDialog dialog = builder.create(); //dialog 생성
 
             Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload);
             ButtonSubmit.setOnClickListener(new View.OnClickListener() {
@@ -329,21 +329,23 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
                     long now = System.currentTimeMillis();
                     Date date = new Date(now);
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
                     String getTime = sdf.format(date);
+
+                    mWriteTime.setText(getTime);
 
                     post.put("id", id);
                     post.put("title", mWriteTitle.getText().toString());
                     post.put("content", mWriteContent.getText().toString());
                     post.put("name", mWriteName.getText().toString());
-                    post.put("time", getTime);
+                    post.put("time", mWriteTime.getText().toString());
 
                     mStore.collection("board").document(id).set(post) //firsestore db에 업로드
                             .addOnSuccessListener(new OnSuccessListener<Void>() {
                                 @Override
                                 public void onSuccess(Void aVoid) {
                                     Toast.makeText(MainActivity.this, "업로드 완료", Toast.LENGTH_SHORT).show();
-                                    UploadBoard();
+                                    UploadBoard(); //새로고침
                                 }
                             })
                             .addOnFailureListener(new OnFailureListener() {
@@ -352,11 +354,10 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                                     Toast.makeText(MainActivity.this, "업로드 실패", Toast.LENGTH_SHORT).show();
                                 }
                             });
-                    //mAdapter.notifyDataSetChanged(); //변경된 데이터를 화면에 반영
-                    dialog.dismiss();
+                    dialog.dismiss(); //dialog 끄기
                 }
             });
-            dialog.show();
+            dialog.show(); //dialog 보여주기
         }
     }
 
@@ -379,8 +380,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             }
 
             @Override
-            public void onCreateContextMenu(ContextMenu contextMenu, View view, ContextMenu.ContextMenuInfo contextMenuInfo) {// 메뉴
-                MenuItem Edit = contextMenu.add(Menu.NONE, 10, 1, "편집");
+            public void onCreateContextMenu(ContextMenu contextMenu, View view, ContextMenu.ContextMenuInfo contextMenuInfo) {// 컨텍스트 메뉴
+                MenuItem Edit = contextMenu.add(Menu.NONE, 10, 1, "수정");
                 MenuItem Delete = contextMenu.add(Menu.NONE, 20, 2, "삭제");
                 Edit.setOnMenuItemClickListener(onEditMenu);
                 Delete.setOnMenuItemClickListener(onEditMenu);
@@ -390,53 +391,54 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 @Override
                 public boolean onMenuItemClick(MenuItem item){
                     switch (item.getItemId()) {
-                        case 10: //편집
-                            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                        case 10: //수정
+                            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this); //dialog 선언
                             View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
                             builder.setView(view);
 
-                            final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title);
+                            final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title); //참조
                             final EditText mWriteContent = (EditText) view.findViewById(R.id.write_content);
                             final TextView mWriteName = (TextView) view.findViewById(R.id.write_name);
-                            mWriteName.setText(UserName);
+                            final TextView mWriteTime = (TextView) view.findViewById(R.id.write_time);
 
-                            final AlertDialog dialog = builder.create();
+                            final AlertDialog dialog = builder.create(); //dialog 생성
 
-                            mWriteTitle.setText(mBoardList.get(getAdapterPosition()).getTitle());
+                            mWriteTitle.setText(mBoardList.get(getAdapterPosition()).getTitle()); //선택한 포지션의 값 가져오기
                             mWriteContent.setText(mBoardList.get(getAdapterPosition()).getContent());
                             //mWriteName.setText(mBoardList.get(getAdapterPosition()).getName());
+                            mWriteName.setText(UserName); //mWriteName에 이메일 넣어주기
+                            mWriteTime.setText(mBoardList.get(getAdapterPosition()).getTime());
 
-                            Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload);
+                            Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload); //업로드버튼 클릭시
                             ButtonSubmit.setOnClickListener(new View.OnClickListener() {
                                 public void onClick(View v) {
-
                                     String id = mBoardList.get(getAdapterPosition()).getId(); //클릭한 인덱스의 아이디값 가져오기
                                     Map<String, Object> post = new HashMap<>();
 
                                     long now = System.currentTimeMillis();
                                     Date date = new Date(now);
-                                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
-                                    String getTime = sdf.format(date);
+                                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                                    String getTimeModi = sdf.format(date);
 
                                     post.put("id", id);
                                     post.put("title", mWriteTitle.getText().toString());
                                     post.put("content", mWriteContent.getText().toString());
                                     post.put("name", mWriteName.getText().toString());
-                                    post.put("time", getTime);
+                                    post.put("time", mWriteTime.getText().toString());
+                                    post.put("time_up", getTimeModi); //수정시간
 
                                     mStore.collection("board").document(id).set(post)
                                             .addOnSuccessListener(new OnSuccessListener<Void>() {
                                                 @Override
                                                 public void onSuccess(Void aVoid) {
-                                                    Toast.makeText(MainActivity.this, "업로드 완료", Toast.LENGTH_SHORT).show();
+                                                    Toast.makeText(MainActivity.this, "수정 완료", Toast.LENGTH_SHORT).show();
                                                     UploadBoard();
                                                 }
                                             })
                                             .addOnFailureListener(new OnFailureListener() {
                                                 @Override
                                                 public void onFailure(@NonNull Exception e) {
-                                                    Log.w("dddddd", "Error updating document", e);
-                                                    Toast.makeText(MainActivity.this, "업로드 실패", Toast.LENGTH_SHORT).show();
+                                                    Toast.makeText(MainActivity.this, "수정 실패", Toast.LENGTH_SHORT).show();
                                                 }
                                             });
                                     dialog.dismiss();
