@@ -20,6 +20,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ems="10"
+        android:hint="이메일형식"
         android:inputType="textPersonName" />
 
     <TextView
@@ -33,5 +34,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ems="10"
+        android:hint="6자리이상"
         android:inputType="textPersonName" />
 </LinearLayout>

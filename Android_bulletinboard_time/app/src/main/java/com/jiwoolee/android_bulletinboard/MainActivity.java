@@ -30,6 +30,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
@@ -74,6 +75,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        FirebaseApp.initializeApp(this);
+
         mStatusTextView = findViewById(R.id.status); //버튼 참조
         mEmailField = findViewById(R.id.fieldEmail);
         mPasswordField = findViewById(R.id.fieldPassword);
@@ -86,6 +89,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         findViewById(R.id.signOutButton).setOnClickListener(this);
         findViewById(R.id.signInButton).setOnClickListener(this);
         findViewById(R.id.floatingbutton).setOnClickListener(this);
+        findViewById(R.id.Testbutton).setOnClickListener(this);
 
         //구글 클라이언트 연결
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -181,8 +185,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                                 @Override
                                 public void onComplete(@NonNull Task<AuthResult> task) {
                                     if (task.isSuccessful()) {
-                                        //Intent intent=new Intent(MainActivity.this,loginok.class);
-                                        //startActivity(intent);
                                         FirebaseUser user = mAuth.getCurrentUser();
                                         updateUI(user);
                                     } else {
@@ -282,7 +284,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private void updateUI(FirebaseUser user) { //UI 업데이트
         hideProgressDialog();
         if (user != null) { //현재 로그인 상태 이면
-            mStatusTextView.setText(getString(R.string.emailpassword_status_fmt, user.getEmail(), user.isEmailVerified()));
+            mStatusTextView.setText(user.getEmail());
             findViewById(R.id.loginFields).setVisibility(View.GONE);
             findViewById(R.id.userFields).setVisibility(View.VISIBLE);
             findViewById(R.id.signInButton).setVisibility(View.GONE);
@@ -307,7 +309,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             signOut();
         } else if (i == R.id.signInButton) {
             signIn_google();
-        }else if (i == R.id.floatingbutton) {
+        } else if (i == R.id.floatingbutton) {
             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this); //dialog 선언
             View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
             builder.setView(view);
@@ -358,6 +360,13 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 }
             });
             dialog.show(); //dialog 보여주기
+        } else if (i == R.id.Testbutton) {
+            mEmailField = findViewById(R.id.fieldEmail);
+            mPasswordField = findViewById(R.id.fieldPassword);
+
+            mEmailField.setText("bulletin@gmail.com");
+            mPasswordField.setText("123456");
+            signIn(mEmailField.getText().toString(), mPasswordField.getText().toString());
         }
     }
 
@@ -369,6 +378,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             private TextView mTitleTextView;
             private TextView mNameTextView;
             private TextView mContentTextView;
+            FirebaseUser user = mAuth.getCurrentUser();
 
             public MainViewHolder(@NonNull View itemView) {
                 super(itemView);
@@ -390,90 +400,94 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             private final MenuItem.OnMenuItemClickListener onEditMenu = new MenuItem.OnMenuItemClickListener() { //컨텍스트 메뉴 클릭시
                 @Override
                 public boolean onMenuItemClick(MenuItem item){
-                    switch (item.getItemId()) {
-                        case 10: //수정
-                            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this); //dialog 선언
-                            View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
-                            builder.setView(view);
+                    if(user.getEmail()==mNameTextView.getText()) { //로그인한 유저가 작성자와 동일인이라면
+                        switch (item.getItemId()) {
+                            case 10: //수정
+                                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this); //dialog 선언
+                                View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
+                                builder.setView(view);
 
-                            final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title); //참조
-                            final EditText mWriteContent = (EditText) view.findViewById(R.id.write_content);
-                            final TextView mWriteName = (TextView) view.findViewById(R.id.write_name);
-                            final TextView mWriteTime = (TextView) view.findViewById(R.id.write_time);
+                                final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title); //참조
+                                final EditText mWriteContent = (EditText) view.findViewById(R.id.write_content);
+                                final TextView mWriteName = (TextView) view.findViewById(R.id.write_name);
+                                final TextView mWriteTime = (TextView) view.findViewById(R.id.write_time);
 
-                            final AlertDialog dialog = builder.create(); //dialog 생성
+                                final AlertDialog dialog = builder.create(); //dialog 생성
 
-                            mWriteTitle.setText(mBoardList.get(getAdapterPosition()).getTitle()); //선택한 포지션의 값 가져오기
-                            mWriteContent.setText(mBoardList.get(getAdapterPosition()).getContent());
-                            //mWriteName.setText(mBoardList.get(getAdapterPosition()).getName());
-                            mWriteName.setText(UserName); //mWriteName에 이메일 넣어주기
-                            mWriteTime.setText(mBoardList.get(getAdapterPosition()).getTime());
+                                mWriteTitle.setText(mBoardList.get(getAdapterPosition()).getTitle()); //선택한 포지션의 값 가져오기
+                                mWriteContent.setText(mBoardList.get(getAdapterPosition()).getContent());
+                                //mWriteName.setText(mBoardList.get(getAdapterPosition()).getName());
+                                mWriteName.setText(UserName); //mWriteName에 이메일 넣어주기
+                                mWriteTime.setText(mBoardList.get(getAdapterPosition()).getTime());
 
-                            Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload); //업로드버튼 클릭시
-                            ButtonSubmit.setOnClickListener(new View.OnClickListener() {
-                                public void onClick(View v) {
-                                    String id = mBoardList.get(getAdapterPosition()).getId(); //클릭한 인덱스의 아이디값 가져오기
-                                    Map<String, Object> post = new HashMap<>();
+                                Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload); //업로드버튼 클릭시
+                                ButtonSubmit.setOnClickListener(new View.OnClickListener() {
+                                    public void onClick(View v) {
+                                        String id = mBoardList.get(getAdapterPosition()).getId(); //클릭한 인덱스의 아이디값 가져오기
+                                        Map<String, Object> post = new HashMap<>();
 
-                                    long now = System.currentTimeMillis();
-                                    Date date = new Date(now);
-                                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-                                    String getTimeModi = sdf.format(date);
+                                        long now = System.currentTimeMillis();
+                                        Date date = new Date(now);
+                                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                                        String getTimeModi = sdf.format(date);
 
-                                    post.put("id", id);
-                                    post.put("title", mWriteTitle.getText().toString());
-                                    post.put("content", mWriteContent.getText().toString());
-                                    post.put("name", mWriteName.getText().toString());
-                                    post.put("time", mWriteTime.getText().toString());
-                                    post.put("time_up", getTimeModi); //수정시간
+                                        post.put("id", id);
+                                        post.put("title", mWriteTitle.getText().toString());
+                                        post.put("content", mWriteContent.getText().toString());
+                                        post.put("name", mWriteName.getText().toString());
+                                        post.put("time", mWriteTime.getText().toString());
+                                        post.put("time_up", getTimeModi); //수정시간
 
-                                    mStore.collection("board").document(id).set(post)
-                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                                @Override
-                                                public void onSuccess(Void aVoid) {
-                                                    Toast.makeText(MainActivity.this, "수정 완료", Toast.LENGTH_SHORT).show();
-                                                    UploadBoard();
-                                                }
-                                            })
-                                            .addOnFailureListener(new OnFailureListener() {
-                                                @Override
-                                                public void onFailure(@NonNull Exception e) {
-                                                    Toast.makeText(MainActivity.this, "수정 실패", Toast.LENGTH_SHORT).show();
-                                                }
-                                            });
-                                    dialog.dismiss();
-                                }
-                            });
-                            dialog.show();
-                            break;
+                                        mStore.collection("board").document(id).set(post)
+                                                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                    @Override
+                                                    public void onSuccess(Void aVoid) {
+                                                        Toast.makeText(MainActivity.this, "수정 완료", Toast.LENGTH_SHORT).show();
+                                                        UploadBoard();
+                                                    }
+                                                })
+                                                .addOnFailureListener(new OnFailureListener() {
+                                                    @Override
+                                                    public void onFailure(@NonNull Exception e) {
+                                                        Toast.makeText(MainActivity.this, "수정 실패", Toast.LENGTH_SHORT).show();
+                                                    }
+                                                });
+                                        dialog.dismiss();
+                                    }
+                                });
+                                dialog.show();
+                                break;
 
-                        case 20: //삭제
-                            String id = mBoardList.get(getAdapterPosition()).getId(); //클릭한 인덱스의 아이디값 가져오기
-                            //Toast.makeText(MainActivity.this, id, Toast.LENGTH_SHORT).show();
+                            case 20: //삭제
+                                String id = mBoardList.get(getAdapterPosition()).getId(); //클릭한 인덱스의 아이디값 가져오기
+                                //Toast.makeText(MainActivity.this, id, Toast.LENGTH_SHORT).show();
 
-                            CollectionReference cr = mStore.collection("board");
-                            Query query = cr.whereEqualTo("id", id); //id로 쿼리
-                            query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                                @Override
-                                public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                                    if(task.isSuccessful()) {
-                                        for(QueryDocumentSnapshot dc : task.getResult()){
-                                            String id = (String) dc.getData().get("id");
-                                            //Toast.makeText(getApplicationContext(), id, Toast.LENGTH_SHORT).show();
-                                            mStore.collection("board").document(id) //해당 id 작성글을 삭제
-                                                    .delete()
-                                                    .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                                        @Override
-                                                        public void onSuccess(Void aVoid) {
-                                                            Toast.makeText(getApplicationContext(), "삭제 완료", Toast.LENGTH_SHORT).show();
-                                                            UploadBoard();
-                                                        }
-                                                    });
+                                CollectionReference cr = mStore.collection("board");
+                                Query query = cr.whereEqualTo("id", id); //id로 쿼리
+                                query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                    @Override
+                                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                                        if(task.isSuccessful()) {
+                                            for(QueryDocumentSnapshot dc : task.getResult()){
+                                                String id = (String) dc.getData().get("id");
+                                                //Toast.makeText(getApplicationContext(), id, Toast.LENGTH_SHORT).show();
+                                                mStore.collection("board").document(id) //해당 id 작성글을 삭제
+                                                        .delete()
+                                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                            @Override
+                                                            public void onSuccess(Void aVoid) {
+                                                                Toast.makeText(getApplicationContext(), "삭제 완료", Toast.LENGTH_SHORT).show();
+                                                                UploadBoard();
+                                                            }
+                                                        });
+                                            }
                                         }
                                     }
-                                }
-                            });
-                            break;
+                                });
+                                break;
+                        }
+                    }else{
+                        Toast.makeText(MainActivity.this, "작성자가 아닌 사람은 수정할 수 없습니다.", Toast.LENGTH_SHORT).show();
                     }
                     return true;
                 }
