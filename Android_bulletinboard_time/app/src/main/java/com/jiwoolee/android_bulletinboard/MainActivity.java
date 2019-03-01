@@ -17,6 +17,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -82,7 +83,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         mPasswordField = findViewById(R.id.fieldPassword);
 
         mRecyclerView = findViewById(R.id.recyclerview);
-
         swipe = findViewById(R.id.swipe);
 
         findViewById(R.id.emailSignInButton).setOnClickListener(this);  //리스너 연결
@@ -90,6 +90,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         findViewById(R.id.signInButton).setOnClickListener(this);
         findViewById(R.id.floatingbutton).setOnClickListener(this);
         findViewById(R.id.Testbutton).setOnClickListener(this);
+        findViewById(R.id.checkBox).setOnClickListener(this);
 
         //구글 클라이언트 연결
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -107,6 +108,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 swipe.setRefreshing(false); //새로고침 종료
             }
         });
+
+        CheckBox checkBox = (CheckBox) findViewById(R.id.checkBox) ;
     }
 
     @Override
@@ -326,7 +329,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload);
             ButtonSubmit.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    String id = (String)mStore.collection("board").document().getId();
+                    String id = (String) mStore.collection("board").document().getId();
                     Map<String, Object> post = new HashMap<>();
 
                     long now = System.currentTimeMillis();
@@ -360,13 +363,23 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 }
             });
             dialog.show(); //dialog 보여주기
-        } else if (i == R.id.Testbutton) {
+        } else if (i == R.id.Testbutton) { //체험모드 로그인
             mEmailField = findViewById(R.id.fieldEmail);
             mPasswordField = findViewById(R.id.fieldPassword);
 
-            mEmailField.setText("bulletin@gmail.com");
-            mPasswordField.setText("123456");
+            mEmailField.setText(R.string.default_email);
+            mPasswordField.setText(R.string.default_password);
             signIn(mEmailField.getText().toString(), mPasswordField.getText().toString());
+        } else if (i == R.id.checkBox) { //상단에 내 글만 체크박스 클릭했을 떄
+            CheckBox checkBox = (CheckBox) findViewById(R.id.checkBox);
+            if (checkBox.isChecked()) {
+                FirebaseUser user = mAuth.getCurrentUser();
+                String name = user.getEmail(); //현재 유저의 이메일(name) 가져오기
+
+
+            } else {
+                // TODO : CheckBox is unchecked.
+            }
         }
     }
 
@@ -400,30 +413,27 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             private final MenuItem.OnMenuItemClickListener onEditMenu = new MenuItem.OnMenuItemClickListener() { //컨텍스트 메뉴 클릭시
                 @Override
                 public boolean onMenuItemClick(MenuItem item){
-                    if(user.getEmail()==mNameTextView.getText()) { //로그인한 유저가 작성자와 동일인이라면
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this); //dialog 선언
+                    View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
+                    builder.setView(view);
+
+                    final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title); //참조
+                    final EditText mWriteContent = (EditText) view.findViewById(R.id.write_content);
+                    final TextView mWriteName = (TextView) view.findViewById(R.id.write_name);
+                    final TextView mWriteTime = (TextView) view.findViewById(R.id.write_time);
+
+                    mWriteTitle.setText(mBoardList.get(getAdapterPosition()).getTitle()); //선택한 포지션의 값 가져오기
+                    mWriteContent.setText(mBoardList.get(getAdapterPosition()).getContent());
+                    mWriteName.setText(mBoardList.get(getAdapterPosition()).getName());
+                    mWriteTime.setText(mBoardList.get(getAdapterPosition()).getTime());
+
+                    if(mWriteName.getText().toString().equals (user.getEmail())) { //로그인한 유저가 작성자와 동일인이라면{
                         switch (item.getItemId()) {
                             case 10: //수정
-                                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this); //dialog 선언
-                                View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
-                                builder.setView(view);
-
-                                final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title); //참조
-                                final EditText mWriteContent = (EditText) view.findViewById(R.id.write_content);
-                                final TextView mWriteName = (TextView) view.findViewById(R.id.write_name);
-                                final TextView mWriteTime = (TextView) view.findViewById(R.id.write_time);
-
                                 final AlertDialog dialog = builder.create(); //dialog 생성
-
-                                mWriteTitle.setText(mBoardList.get(getAdapterPosition()).getTitle()); //선택한 포지션의 값 가져오기
-                                mWriteContent.setText(mBoardList.get(getAdapterPosition()).getContent());
-                                //mWriteName.setText(mBoardList.get(getAdapterPosition()).getName());
-                                mWriteName.setText(UserName); //mWriteName에 이메일 넣어주기
-                                mWriteTime.setText(mBoardList.get(getAdapterPosition()).getTime());
-
                                 Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload); //업로드버튼 클릭시
                                 ButtonSubmit.setOnClickListener(new View.OnClickListener() {
-                                    public void onClick(View v) {
-                                        String id = mBoardList.get(getAdapterPosition()).getId(); //클릭한 인덱스의 아이디값 가져오기
+                                    public void onClick(View v) { String id = mBoardList.get(getAdapterPosition()).getId(); //클릭한 인덱스의 아이디값 가져오기
                                         Map<String, Object> post = new HashMap<>();
 
                                         long now = System.currentTimeMillis();
@@ -487,7 +497,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                                 break;
                         }
                     }else{
-                        Toast.makeText(MainActivity.this, "작성자가 아닌 사람은 수정할 수 없습니다.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "작성자가 아닌 유저는 수정, 삭제할 수 없습니다.", Toast.LENGTH_SHORT).show();
                     }
                     return true;
                 }
