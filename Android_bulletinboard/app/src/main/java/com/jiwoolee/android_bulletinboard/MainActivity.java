@@ -2,6 +2,7 @@ package com.jiwoolee.android_bulletinboard;
 
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -18,6 +19,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -66,31 +68,36 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private List<Board> mBoardList;
     private BoardAdapter mAdapter;
 
-    private String UserName;
-    private SwipeRefreshLayout swipe;
+    private String UserName;          //이메일 담을 변수
+    private SwipeRefreshLayout swipe; //당겨서 새로고침
 
     private FirebaseFirestore mStore = FirebaseFirestore.getInstance(); //firestore 연결
+
+    private CheckBox checkBox;           //checkbox
+    private SharedPreferences CheckPre;  //checkbox값 저장할 SharedPreferences 선언
+    private SharedPreferences.Editor CheckPreEdit;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        FirebaseApp.initializeApp(this);
+//        FirebaseApp.initializeApp(this);
 
-        mStatusTextView = findViewById(R.id.status); //버튼 참조
+        mStatusTextView = findViewById(R.id.status); //id값과 연결
         mEmailField = findViewById(R.id.fieldEmail);
         mPasswordField = findViewById(R.id.fieldPassword);
-
         mRecyclerView = findViewById(R.id.recyclerview);
         swipe = findViewById(R.id.swipe);
 
-        findViewById(R.id.emailSignInButton).setOnClickListener(this);  //리스너 연결
+        findViewById(R.id.emailSignInButton).setOnClickListener(this);  //버튼 리스너 연결
         findViewById(R.id.signOutButton).setOnClickListener(this);
         findViewById(R.id.signInButton).setOnClickListener(this);
         findViewById(R.id.floatingbutton).setOnClickListener(this);
         findViewById(R.id.Testbutton).setOnClickListener(this);
-        findViewById(R.id.checkBox).setOnClickListener(this);
+
+        checkBox = findViewById(R.id.checkBox); //체크박스 리스너 연결
+        checkBox.setOnCheckedChangeListener(onCheckedChangeListener);
 
         //구글 클라이언트 연결
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -98,8 +105,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 .requestEmail()
                 .build();
 
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
-        mAuth = FirebaseAuth.getInstance(); //firebase 연결
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso); //firebase 연결
+        mAuth = FirebaseAuth.getInstance();
 
         swipe.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() { //위로 당겨서 새로고침시
             @Override
@@ -109,7 +116,13 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             }
         });
 
-        CheckBox checkBox = (CheckBox) findViewById(R.id.checkBox) ;
+        CheckPre = getSharedPreferences("checkbox", 0);       //checkbox값 저장 위해 getSharedPreferences 사용
+        CheckPreEdit = CheckPre.edit();
+        if(CheckPre.getString("checkbox", "").equals("1")) {         //어플을 껐다 켰을 때 스위치 상태를 적용하기 위해 SharedPreferences 내용확인,
+            checkBox.setChecked(true);                                       //1이면 체크
+        } else {
+            checkBox.setChecked(false);                                      //0이면 체크x
+        }
     }
 
     @Override
@@ -117,34 +130,58 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         super.onStart();
         FirebaseUser currentUser = mAuth.getCurrentUser(); //현재 로그인 되어있는지 확인
         updateUI(currentUser);                             //로그인 여부에 따라 UI 업데이트
-        UploadBoard(); //실시간 업로드
+        UploadBoard();                                     //게시판 쿼리
     }
 
-    private void UploadBoard(){ //게시판 실시간업로드
-        mBoardList = new ArrayList<>();
+    private void UploadBoard(){ //게시판 쿼리
+       mBoardList = new ArrayList<>();
+        FirebaseUser user = mAuth.getCurrentUser();
+        String name = user.getEmail(); //현재 로그인한 유저의 이메일(name) 가져오기
+        //Toast.makeText(MainActivity.this, name, Toast.LENGTH_LONG).show();
 
-        mStore.collection("board").orderBy("time", Query.Direction.DESCENDING).addSnapshotListener(new EventListener<QuerySnapshot>() { //작성시간 역순으로 정렬
-            @Override
-            public void onEvent(@Nullable QuerySnapshot snapshot, @Nullable FirebaseFirestoreException e) {
-                for(DocumentChange dc : snapshot.getDocumentChanges()){
-                    String id = (String) dc.getDocument().getData().get("id");
-                    String title = (String) dc.getDocument().getData().get("title");
-                    String content = (String) dc.getDocument().getData().get("content");
-                    String name = (String) dc.getDocument().getData().get("name");
-                    String time = (String) dc.getDocument().getData().get("time");
+        if(CheckPre.getString("checkbox", "").equals("1")) { //체크박스에 체크가 되어있으면
+            mStore.collection("board").whereEqualTo("name", name) //이메일로 쿼리
+                    .orderBy("time", Query.Direction.DESCENDING).addSnapshotListener(new EventListener<QuerySnapshot>() { //작성시간 역순으로 정렬
+                @Override
+                public void onEvent(@Nullable QuerySnapshot snapshot, @Nullable FirebaseFirestoreException e) {
+                    for(DocumentChange dc : snapshot.getDocumentChanges()){
+                        String id = (String) dc.getDocument().getData().get("id");
+                        String title = (String) dc.getDocument().getData().get("title");
+                        String content = (String) dc.getDocument().getData().get("content");
+                        String name = (String) dc.getDocument().getData().get("name");
+                        String time = (String) dc.getDocument().getData().get("time");
 
-                    Board data = new Board(id, title, content, name, time);
-                    mBoardList.add(data);
+                        Board data = new Board(id, title, content, name, time);
+                        mBoardList.add(data);
+                    }
+                    mAdapter = new BoardAdapter(mBoardList);
+                    mRecyclerView.setAdapter(mAdapter);
                 }
-                mAdapter = new BoardAdapter(mBoardList);
-                mRecyclerView.setAdapter(mAdapter);
-            }
-        });
+            });
+        } else { //체크박스에 체크가 되어있지 않으면
+            mStore.collection("board")
+                    .orderBy("time", Query.Direction.DESCENDING).addSnapshotListener(new EventListener<QuerySnapshot>() { //작성시간 역순으로 정렬
+                @Override
+                public void onEvent(@Nullable QuerySnapshot snapshot, @Nullable FirebaseFirestoreException e) {
+                    for(DocumentChange dc : snapshot.getDocumentChanges()){
+                        String id = (String) dc.getDocument().getData().get("id");
+                        String title = (String) dc.getDocument().getData().get("title");
+                        String content = (String) dc.getDocument().getData().get("content");
+                        String name = (String) dc.getDocument().getData().get("name");
+                        String time = (String) dc.getDocument().getData().get("time");
+
+                        Board data = new Board(id, title, content, name, time);
+                        mBoardList.add(data);
+                    }
+                    mAdapter = new BoardAdapter(mBoardList);
+                    mRecyclerView.setAdapter(mAdapter);
+                }
+            });
+        }
     }
 
     //로그인////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    private void signIn_google() { //구글로그인
+    private void signIn_google() { //구글 로그인
         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
         startActivityForResult(signInIntent, RC_SIGN_IN);
     }
@@ -152,7 +189,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
@@ -176,15 +212,11 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         }
     }
 
-    private void signIn(String email, String password) { //로그인
-        if (!validateForm()) {
-            return;
-        }
-
-        showProgressDialog(); //프로그래스바
-
+    private void signIn(String email, String password) { //이메일 로그인
+        if (!validateForm()) { return; } //폼이 비어있으면 return
+        showProgressDialog(); //프로그래스바 보이기
         mAuth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() { //로그인성공시
                                 @Override
                                 public void onComplete(@NonNull Task<AuthResult> task) {
                                     if (task.isSuccessful()) {
@@ -193,12 +225,21 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                                     } else {
                                         updateUI(null);
                         }
-                        if (!task.isSuccessful()) {
+                        if (!task.isSuccessful()) { //로그인실패시
                             mStatusTextView.setText(R.string.auth_failed);
                         }
-                        hideProgressDialog();
+                        hideProgressDialog(); //프로그래스바 숨기기
                     }
                 });
+    }
+
+    private void signIn_test() { //체험모드 로그인
+        mEmailField = findViewById(R.id.fieldEmail);
+        mPasswordField = findViewById(R.id.fieldPassword);
+
+        mEmailField.setText(R.string.default_email);
+        mPasswordField.setText(R.string.default_password);
+        signIn(mEmailField.getText().toString(), mPasswordField.getText().toString());
     }
 
     private boolean validateForm() { //로그인 폼 채움 여부
@@ -227,30 +268,27 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     }
 
     //회원가입//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public void btn_createAccount(View view){     //커스텀 다이얼로그
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("회원 가입");   //제목
+    public void btn_createAccount(View view){
+        AlertDialog.Builder builder = new AlertDialog.Builder(this); //커스텀 다이얼로그
+        builder.setTitle("회원 가입");         //타이틀
         builder.setIcon(R.mipmap.ic_launcher); //아이콘
 
-        //다이얼로그를 통해 보여줄 뷰 설정
-        LayoutInflater inflater = getLayoutInflater();
+        LayoutInflater inflater = getLayoutInflater(); //다이얼로그 뷰 설정
         View v1 = inflater.inflate(R.layout.custom_dialog, null);
         builder.setView(v1);
 
-        DialogListener listener = new DialogListener();
-
+        DialogListener listener = new DialogListener(); //리스너 연결
         builder.setPositiveButton("확인",listener);
         builder.setNegativeButton("취소", listener);
 
-        builder.show(); //띄우기
+        builder.show(); //다이얼 로그 띄우기
     }
 
-    class DialogListener implements DialogInterface.OnClickListener{     //커스텀 다이얼로그 리스너
+    class DialogListener implements DialogInterface.OnClickListener{ //커스텀 다이얼로그 리스너
         @Override
         public void onClick(DialogInterface dialog, int which) {
-            //AlertDialog가 가지고 있는 뷰를 가져옴
             AlertDialog alert = (AlertDialog)dialog;
-            EditText edit1 = (EditText)alert.findViewById(R.id.editText);
+            EditText edit1 = (EditText)alert.findViewById(R.id.editText); //뷰가저옴
             EditText edit2 = (EditText)alert.findViewById(R.id.editText2);
 
             String str1 = edit1.getText().toString(); //문자열가져옴
@@ -264,10 +302,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     }
 
     private void createAccount(String email, String password) { //이메일계정생성
-        if (!validateForm()) { return; } //폼이 비었으면 return
-
+        if (!validateForm()) { return; } //폼이 비어있으면 return
         showProgressDialog();
-
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                     @Override
@@ -283,7 +319,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 });
     }
 
-    //UI////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //게시판////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     private void updateUI(FirebaseUser user) { //UI 업데이트
         hideProgressDialog();
         if (user != null) { //현재 로그인 상태 이면
@@ -291,9 +327,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             findViewById(R.id.loginFields).setVisibility(View.GONE);
             findViewById(R.id.userFields).setVisibility(View.VISIBLE);
             findViewById(R.id.signInButton).setVisibility(View.GONE);
-
             UserName = user.getEmail();
-            //Toast.makeText(getApplicationContext(),UserName, Toast.LENGTH_SHORT).show();
 
         } else { //현재 로그인 상태가 아니면
             mStatusTextView.setText(R.string.signed_out);
@@ -303,85 +337,90 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         }
     }
 
+    private void uploadPost() { //게시글 작성
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this); //dialog 선언
+        View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
+        builder.setView(view);
+
+        final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title); //참조
+        final EditText mWriteContent = (EditText) view.findViewById(R.id.write_content);
+        final TextView mWriteName = (TextView) view.findViewById(R.id.write_name);
+        final TextView mWriteTime = (TextView) view.findViewById(R.id.write_time);
+        mWriteName.setText(UserName); //mWriteName에 이메일 넣어주기
+
+        final AlertDialog dialog = builder.create(); //dialog 생성
+
+        Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload); //업로드버튼 클릭시
+        ButtonSubmit.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                String id = (String) mStore.collection("board").document().getId(); //board 테이블의 id값 받아서
+                Map<String, Object> post = new HashMap<>();
+
+                long now = System.currentTimeMillis();
+                Date date = new Date(now);
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                String getTime = sdf.format(date); //현재시간 받아오기
+
+                mWriteTime.setText(getTime);
+
+                post.put("id", id); //map 함수에 데이터 담기
+                post.put("title", mWriteTitle.getText().toString());
+                post.put("content", mWriteContent.getText().toString());
+                post.put("name", mWriteName.getText().toString());
+                post.put("time", mWriteTime.getText().toString());
+
+                mStore.collection("board").document(id).set(post) //firsestore db에 업로드
+                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                            @Override
+                            public void onSuccess(Void aVoid) {
+                                Toast.makeText(MainActivity.this, "업로드 완료", Toast.LENGTH_SHORT).show();
+                                UploadBoard(); //새로고침
+                            }
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Toast.makeText(MainActivity.this, "업로드 실패", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                dialog.dismiss(); //dialog 끄기
+            }
+        });
+        dialog.show(); //dialog 보여주기
+    }
+
+    //listener//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public void onClick(View v) { //버튼클릭시
         int i = v.getId();
-        if (i == R.id.emailSignInButton) {
-            signIn(mEmailField.getText().toString(), mPasswordField.getText().toString());
-        } else if (i == R.id.signOutButton) {
-            signOut();
-        } else if (i == R.id.signInButton) {
+        if (i == R.id.signInButton) { //구글 로그인
             signIn_google();
-        } else if (i == R.id.floatingbutton) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this); //dialog 선언
-            View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.edit_box, null, false);
-            builder.setView(view);
-
-            final EditText mWriteTitle = (EditText) view.findViewById(R.id.write_title); //참조
-            final EditText mWriteContent = (EditText) view.findViewById(R.id.write_content);
-            final TextView mWriteName = (TextView) view.findViewById(R.id.write_name);
-            final TextView mWriteTime = (TextView) view.findViewById(R.id.write_time);
-
-            mWriteName.setText(UserName); //mWriteName에 이메일 넣어주기
-
-            final AlertDialog dialog = builder.create(); //dialog 생성
-
-            Button ButtonSubmit = (Button) view.findViewById(R.id.write_upload);
-            ButtonSubmit.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    String id = (String) mStore.collection("board").document().getId();
-                    Map<String, Object> post = new HashMap<>();
-
-                    long now = System.currentTimeMillis();
-                    Date date = new Date(now);
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-                    String getTime = sdf.format(date);
-
-                    mWriteTime.setText(getTime);
-
-                    post.put("id", id);
-                    post.put("title", mWriteTitle.getText().toString());
-                    post.put("content", mWriteContent.getText().toString());
-                    post.put("name", mWriteName.getText().toString());
-                    post.put("time", mWriteTime.getText().toString());
-
-                    mStore.collection("board").document(id).set(post) //firsestore db에 업로드
-                            .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                @Override
-                                public void onSuccess(Void aVoid) {
-                                    Toast.makeText(MainActivity.this, "업로드 완료", Toast.LENGTH_SHORT).show();
-                                    UploadBoard(); //새로고침
-                                }
-                            })
-                            .addOnFailureListener(new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    Toast.makeText(MainActivity.this, "업로드 실패", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                    dialog.dismiss(); //dialog 끄기
-                }
-            });
-            dialog.show(); //dialog 보여주기
-        } else if (i == R.id.Testbutton) { //체험모드 로그인
-            mEmailField = findViewById(R.id.fieldEmail);
-            mPasswordField = findViewById(R.id.fieldPassword);
-
-            mEmailField.setText(R.string.default_email);
-            mPasswordField.setText(R.string.default_password);
+        }else if (i == R.id.emailSignInButton) { //이메일 로그인
             signIn(mEmailField.getText().toString(), mPasswordField.getText().toString());
-        } else if (i == R.id.checkBox) { //상단에 내 글만 체크박스 클릭했을 떄
-            CheckBox checkBox = (CheckBox) findViewById(R.id.checkBox);
-            if (checkBox.isChecked()) {
-                FirebaseUser user = mAuth.getCurrentUser();
-                String name = user.getEmail(); //현재 유저의 이메일(name) 가져오기
-
-
-            } else {
-                // TODO : CheckBox is unchecked.
-            }
+        }else if (i == R.id.Testbutton) { //체험모드 로그인
+            signIn_test();
+        } else if (i == R.id.signOutButton) { //로그아웃
+            signOut();
+        } else if (i == R.id.floatingbutton) { //게시글 작성
+            uploadPost();
         }
     }
+
+    private CompoundButton.OnCheckedChangeListener onCheckedChangeListener = new CompoundButton.OnCheckedChangeListener() { //체크박스 체크 클릭시
+        @Override
+        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+            if (isChecked){ //체크시
+                CheckPreEdit.putString("checkbox", "1");                // 1
+                CheckPreEdit.commit();                                          // SharedPreferences에 저장
+                //Toast.makeText(MainActivity.this, CheckPre.getString("checkbox", ""), Toast.LENGTH_LONG).show();
+                UploadBoard();
+            } else{
+                CheckPreEdit.putString("checkbox", "0");                // 0
+                CheckPreEdit.commit();                                          // SharedPreferences에 저장
+                UploadBoard();
+            }
+        }
+    };
 
     //Adapter///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     private class BoardAdapter extends RecyclerView.Adapter<BoardAdapter.MainViewHolder>{ //게시판 어뎁터
@@ -439,9 +478,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                                         long now = System.currentTimeMillis();
                                         Date date = new Date(now);
                                         SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-                                        String getTimeModi = sdf.format(date);
+                                        String getTimeModi = sdf.format(date); //현재시간 받아오기
 
-                                        post.put("id", id);
+                                        post.put("id", id); //map 함수에 데이터 담기
                                         post.put("title", mWriteTitle.getText().toString());
                                         post.put("content", mWriteContent.getText().toString());
                                         post.put("name", mWriteName.getText().toString());
@@ -472,28 +511,21 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                                 String id = mBoardList.get(getAdapterPosition()).getId(); //클릭한 인덱스의 아이디값 가져오기
                                 //Toast.makeText(MainActivity.this, id, Toast.LENGTH_SHORT).show();
 
-                                CollectionReference cr = mStore.collection("board");
-                                Query query = cr.whereEqualTo("id", id); //id로 쿼리
-                                query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                                    @Override
-                                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                                        if(task.isSuccessful()) {
-                                            for(QueryDocumentSnapshot dc : task.getResult()){
-                                                String id = (String) dc.getData().get("id");
-                                                //Toast.makeText(getApplicationContext(), id, Toast.LENGTH_SHORT).show();
-                                                mStore.collection("board").document(id) //해당 id 작성글을 삭제
-                                                        .delete()
-                                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                                            @Override
-                                                            public void onSuccess(Void aVoid) {
-                                                                Toast.makeText(getApplicationContext(), "삭제 완료", Toast.LENGTH_SHORT).show();
-                                                                UploadBoard();
-                                                            }
-                                                        });
+                                mStore.collection("board").document(id).delete()
+                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                            @Override
+                                            public void onSuccess(Void aVoid) {
+                                                Toast.makeText(MainActivity.this, "삭제 완료", Toast.LENGTH_SHORT).show();
+                                                UploadBoard(); //새로고침
                                             }
-                                        }
-                                    }
-                                });
+                                        })
+                                        .addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                Toast.makeText(MainActivity.this, "삭제 실패", Toast.LENGTH_SHORT).show();
+                                            }
+                                        });
+
                                 break;
                         }
                     }else{
