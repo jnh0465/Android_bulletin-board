@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Android_bulletinboard</string>
+    <string name="app_name">Android_bulletinboard_190306</string>
 
     <string name="label_emailpassword">Email/Password Authentication</string>
     <string name="desc_emailpassword">Use an email and password to authenticate with Firebase.</string>

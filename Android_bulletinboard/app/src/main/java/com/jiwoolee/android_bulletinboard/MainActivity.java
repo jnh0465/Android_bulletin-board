@@ -130,7 +130,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         super.onStart();
         FirebaseUser currentUser = mAuth.getCurrentUser(); //현재 로그인 되어있는지 확인
         updateUI(currentUser);                             //로그인 여부에 따라 UI 업데이트
-        UploadBoard();                                     //게시판 쿼리
     }
 
     private void UploadBoard(){ //게시판 쿼리
@@ -328,7 +327,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             findViewById(R.id.userFields).setVisibility(View.VISIBLE);
             findViewById(R.id.signInButton).setVisibility(View.GONE);
             UserName = user.getEmail();
-
+            UploadBoard();                                     //게시판 쿼리
+            
         } else { //현재 로그인 상태가 아니면
             mStatusTextView.setText(R.string.signed_out);
             findViewById(R.id.loginFields).setVisibility(View.VISIBLE);
