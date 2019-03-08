@@ -130,16 +130,16 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         super.onStart();
         FirebaseUser currentUser = mAuth.getCurrentUser(); //현재 로그인 되어있는지 확인
         updateUI(currentUser);                             //로그인 여부에 따라 UI 업데이트
+        UploadBoard();
     }
 
     private void UploadBoard(){ //게시판 쿼리
        mBoardList = new ArrayList<>();
         FirebaseUser user = mAuth.getCurrentUser();
-        String name = user.getEmail(); //현재 로그인한 유저의 이메일(name) 가져오기
         //Toast.makeText(MainActivity.this, name, Toast.LENGTH_LONG).show();
 
         if(CheckPre.getString("checkbox", "").equals("1")) { //체크박스에 체크가 되어있으면
-            mStore.collection("board").whereEqualTo("name", name) //이메일로 쿼리
+            mStore.collection("board").whereEqualTo("name", UserName) //이메일로 쿼리
                     .orderBy("time", Query.Direction.DESCENDING).addSnapshotListener(new EventListener<QuerySnapshot>() { //작성시간 역순으로 정렬
                 @Override
                 public void onEvent(@Nullable QuerySnapshot snapshot, @Nullable FirebaseFirestoreException e) {
@@ -264,6 +264,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private void signOut() { //로그아웃
         mAuth.signOut();
         updateUI(null);
+
+        mEmailField.setText("");
+        mPasswordField.setText("");
     }
 
     //회원가입//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -327,8 +330,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             findViewById(R.id.userFields).setVisibility(View.VISIBLE);
             findViewById(R.id.signInButton).setVisibility(View.GONE);
             UserName = user.getEmail();
-            UploadBoard();                                     //게시판 쿼리
-            
         } else { //현재 로그인 상태가 아니면
             mStatusTextView.setText(R.string.signed_out);
             findViewById(R.id.loginFields).setVisibility(View.VISIBLE);
@@ -413,6 +414,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 CheckPreEdit.putString("checkbox", "1");                // 1
                 CheckPreEdit.commit();                                          // SharedPreferences에 저장
                 //Toast.makeText(MainActivity.this, CheckPre.getString("checkbox", ""), Toast.LENGTH_LONG).show();
+
                 UploadBoard();
             } else{
                 CheckPreEdit.putString("checkbox", "0");                // 0
