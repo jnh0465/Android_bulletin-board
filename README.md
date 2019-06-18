@@ -1,8 +1,7 @@
 # Android_bulletin-board
 190208-190218 / Android + Firebase
 
-<img src="https://user-images.githubusercontent.com/38582562/58412544-a2c69200-80b1-11e9-8cb7-e8fc0ade51b3.gif" width="32%">
-<img src="https://user-images.githubusercontent.com/38582562/58412543-a2c69200-80b1-11e9-8e0c-f2ee05948258.gif" width="32%">
+<img src="https://user-images.githubusercontent.com/38582562/58412544-a2c69200-80b1-11e9-8cb7-e8fc0ade51b3.gif" width="32%"> <img src="https://user-images.githubusercontent.com/38582562/58412543-a2c69200-80b1-11e9-8e0c-f2ee05948258.gif" width="32%">
 
 `기능 : `   
 ~~~
